@@ -1,0 +1,65 @@
+// Matek F405-Wing V2: everything past the STM32F405RG's pins.
+// Pin map from Matek's product page and ArduPilot's hwdef
+// (libraries/AP_HAL_ChibiOS/hwdef/MatekF405-Wing/hwdef.dat); INAV's
+// MATEKF405SE target agrees on every line used here.
+
+// ICM-42688-P IMU on SPI1 (PA5/PA6/PA7), chip select PA4. INT is not wired.
+imu: SPI.ScriptedSpiSlave @ spi1
+    file: "PEERS/icm42688.py"
+gpioPortA:
+    4 -> imu@0
+
+// DPS310 barometer on I2C1 (PB8/PB9) at 0x76.
+baro: I2C.ScriptedI2cSlave @ i2c1 0x76
+    file: "PEERS/dps310.py"
+    address: 0x76
+
+// AT7456E OSD on SPI2 (PB13/PC2/PC3), chip select PB12.
+osd: SPI.ScriptedSpiSlave @ spi2
+    file: "PEERS/max7456.py"
+gpioPortB:
+    12 -> osd@0
+
+// microSD socket on SPI3 (PB3/PB4/PB5), chip select PC14. Swap the file for
+// peers/sd_absent.py to run without a card.
+sd: SPI.ScriptedSpiSlave @ spi3
+    file: "PEERS/sd_spi.py"
+gpioPortC:
+    14 -> sd@0
+
+// S.Bus receiver on RX2 (PA3) behind the board's inverter; wired to usart2 by
+// the test's `media: uart` entry.
+rx: UART.ScriptedUartPeer @ sysbus 0x60200000
+    file: "PEERS/sbus_rx.py"
+
+// DMA request routing. ArduPilot drives SPI, I2C and the UARTs through DMA.
+// STM32DMA takes peripheral requests on input 8 + 8*channel + stream
+// (renode-infrastructure#230), so every candidate of RM0090 Rev 22 Table 43
+// (DMA1) / Table 44 (DMA2) is wired and the firmware's CHSEL selects the
+// stream, as on silicon. This belongs in the chip description; it sits here
+// until mcu-lib can gate it on the engine version that carries #230.
+spi3:
+    DMAReceive -> dma1@8 | dma1@10
+    DMASend -> dma1@13 | dma1@15
+spi2:
+    DMAReceive -> dma1@11
+    DMASend -> dma1@12
+i2c1:
+    RxDMARequest -> dma1@16 | dma1@21
+    TxDMARequest -> dma1@22 | dma1@23
+i2c2:
+    RxDMARequest -> dma1@66 | dma1@67
+    TxDMARequest -> dma1@71
+spi1:
+    DMAReceive -> dma2@32 | dma2@34
+    DMASend -> dma2@35 | dma2@37
+usart1:
+    DMARequest -> dma2@42 | dma2@45
+    DMATransmitRequest -> dma2@47
+usart2:
+    DMARequest -> dma1@45
+    DMATransmitRequest -> dma1@46
+
+// Not modelled here: ADC inputs PC0 VBAT (1:11), PC1 current (31.7 A/V),
+// PC5 RSSI -- the STM32_ADC model takes samples through FeedSample, not a
+// repl property; VBUS sense PC13; LEDs PA13/PA14, buzzer PC15 (plain pads).

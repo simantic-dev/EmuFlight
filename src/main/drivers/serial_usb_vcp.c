@@ -212,6 +212,10 @@ serialPort_t *usbVcpOpen(void) {
 #ifdef USE_USB_CDC_HID
     }
 #endif
+#ifdef SIM_DEMO_DEVCONNECT
+    /* pyrite resets OTG_FS_DCTL.SDIS to 1 (RM0090 says 0); connect explicitly */
+    DCD_DevConnect(&USB_OTG_dev);
+#endif
 #elif defined(STM32F7) || defined(STM32H7)
     usbGenerateDisconnectPulse();
     IOInit(IOGetByTag(IO_TAG(PA11)), OWNER_USB, 0);

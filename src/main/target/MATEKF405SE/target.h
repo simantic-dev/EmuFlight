@@ -54,29 +54,18 @@
 #define SPI3_MISO_PIN           PB4
 #define SPI3_MOSI_PIN           PB5
 
-#define MPU6000_CS_PIN          PA4
-#define MPU6000_SPI_BUS    SPIDEV_1
-
-#define MPU6500_CS_PIN          PA4
-#define MPU6500_SPI_BUS    SPIDEV_1
-
-#define USE_EXTI
-#define MPU_INT_EXTI            PC4
-#define USE_MPU_DATA_READY_SIGNAL
+#define SIM_DEMO_DEVCONNECT
+// SIM-DEMO: ICM-42688P on SPI1/PA4 as on the Matek F405-Wing (INT not wired)
+#define ICM42688P_CS_PIN        PA4
+#define ICM42688P_SPI_BUS       SPIDEV_1
 
 #define USE_GYRO
-#define USE_GYRO_SPI_MPU6000
-#define GYRO_MPU6000_ALIGN      CW270_DEG
-
-#define USE_GYRO_SPI_MPU6500
-#define GYRO_MPU6500_ALIGN      CW180_DEG
+#define USE_GYRO_SPI_ICM42688P
+#define GYRO_ICM42688P_ALIGN    CW180_DEG
 
 #define USE_ACC
-#define USE_ACC_SPI_MPU6000
-#define ACC_MPU6000_ALIGN       CW270_DEG
-
-#define USE_ACC_SPI_MPU6500
-#define ACC_MPU6500_ALIGN       CW180_DEG
+#define USE_ACC_SPI_ICM42688P
+#define ACC_ICM42688P_ALIGN     CW180_DEG
 
 #define USE_MAG
 #define USE_MAG_HMC5883
@@ -88,7 +77,7 @@
 #define USE_I2C_DEVICE_1
 #define I2C_DEVICE_1            (I2CDEV_1)
 #define I2C1_SCL                PB8        // S4 pad
-#define I2C3_SDA                PB9        // S6 pad
+#define I2C1_SDA                PB9        // S6 pad (SIM-DEMO: was I2C3_SDA, a typo that left I2C1_SDA on PB7 = motor 1)
 #define BARO_I2C_INSTANCE       (I2CDEV_1)
 
 #define USE_I2C_DEVICE_2

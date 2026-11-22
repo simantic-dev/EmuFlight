@@ -1,0 +1,12 @@
+# Run from sim-demo/ after build.sh and prep_config (README). Overlay paths are
+# resolved by run.sh, which substitutes PEERS in f405.board.
+machines:
+  fc:
+    mcu: STM32F405RG
+    elf: ef.elf
+    overlay: f405.run.board
+    preload: [cfg.bin@0x08004000]   # `aux 0 0 0 1700 2100 0 0` + `save`, see README
+media:
+  - type: uart
+    connect: [fc.usart2, fc.rx]     # S.Bus receiver on RX2
+timeout: 14
