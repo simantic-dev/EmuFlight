@@ -15,6 +15,14 @@ Sim 0.10.6, pyrite engine, JIT default.
 - Build: GCC 15.2 works with `GCC_REQUIRED_VERSION` overridden (build.sh).
 
 ## Results
+![S.Bus AUX1 high, armed, DShot600 on the four motor pins](arm.gif)
+
+`make_gif.py` (`uv run --with pillow make_gif.py <rec> arm.gif`) renders it from a `--record` bundle; every number is read from the bundle.
+
+Re-run 2026-11-22 (rebuilt, config regenerated, `--timeout 14`, `--record`): fault 0; AUX1 high in the S.Bus frame at 7.0140 s;
+DShot 0 from 2.2617 s, 138 from 7.0303 s (16.3 ms after AUX1), all CRC valid on PB7/PB6/PB0 (92220 frames each) and PB1 (92212).
+Armed rate 54790 frames in 6.97 s = 7.86 kHz.
+
 | rung | result |
 | --- | --- |
 | 1 boot, no fault, gyro | yes. `init` at 0.0129 s, `icm426xxGyroInit` hit, scheduler runs, 0 faults |
@@ -29,7 +37,7 @@ reproduced, unexplained.)
 
 Motor path: motor_pwm_protocol DSHOT600, TIM3 UP DMA1 s2 and TIM4 UP DMA1 s6
 (DMAR burst, DCR=0x30d). Disarmed: value 0 frames from 2.26 s. Armed: 138 from
-7.03 s, 42614 frames on each pin through 13 s (~7 kHz frame rate).
+7.03 s (frame counts: see the re-run above).
 
 Speed: 13 s virtual = 2.18 G guest instructions (168 MHz, 1 insn/cycle table),
 138 s wall with `--record` (10.6 M gpio lines, motor edges) and two
@@ -37,11 +45,20 @@ Speed: 13 s virtual = 2.18 G guest instructions (168 MHz, 1 insn/cycle table),
 real time. 5 s virtual, no record: 40 s wall (~800 M insns). Host/guest
 instruction ratio: not measured.
 
+## Findings (2026-11-22)
+- SD `Startup failed` was a firmware bug, now fixed here (`src/main/pg/sdcard.c`): the PG reset stored
+  `spiDeviceByInstance(SPI3)` (0-based, 2) in `sdcardConfig.device`, but `spiSetBusInstance()` takes a 1-based CLI id
+  (`SPI_CFG_TO_DEV(x) = x - 1`), so the card driver ran on SPI2 (the OSD bus). SPI3 registers were written once at 0.115 s and never
+  again; the peer saw no SELECT. All other PG resets use `SPI_DEV_TO_CFG()`. With the fix the peer sees CMD0 (R1 0x01), CMD8 (echoes 0x1AB),
+  CMD55/ACMD41, CMD58, CMD9, CMD10, CMD17 from 2.2617 s, `sdcard_reset` is never hit. The peer's CMD8 echo fix was also needed (SD PLS 4.3.13).
+  `sd_info` itself was not re-run (`--preload` and `--usb-cdc-pty` cannot be combined); the evidence is the traced command sequence.
+- `I2C Errors: 1` / no baro: pyrite model bug, simantic-dev/pyrite#4171. The DPS310 peer answers ID, reset, MEAS_CFG correctly; the
+  firmware's 9-byte coefficient read (`bus_i2c_stm32f10x.c`, the RM0090 EV7_2 sequence) gets only 8 bytes from the model (peer `on_read`
+  called for 0x10..0x17), times out after ~5 ms and re-inits the bus. Not fixable in firmware or peer without deviating from the RM sequence.
+
 ## Open
-- `SD card: Startup failed` (SPI3). The shipped `sd_spi.py` answers CMD8 with a
-  fixed 0xAA check pattern; EmuFlight sends 0xAB and the card must echo it (SD PLS
-  4.3.13). Peer fixed here to echo; still fails, cause not found.
-- `I2C Errors: 1`, no baro task in `tasks`: not investigated.
+- Baro task absent until pyrite#4171 is fixed.
+- `sd_info` output and a blackbox write to the card not checked (SD init now completes).
 - ADC not fed: Vref 0.00 V, battery not present (as in the Wing overlay).
 - `--usb-cdc-console fc.usb_otg_fs=<text>` delivered only the first line ("#");
   use `--usb-cdc-pty` (single machine only) with cli_pty.py for CLI sessions.

@@ -58,7 +58,7 @@ void pgResetFn_sdcardConfig(sdcardConfig_t *config) {
 #endif
 #ifdef SDCARD_SPI_INSTANCE
     const SPIDevice spidevice = spiDeviceByInstance(SDCARD_SPI_INSTANCE);
-    config->device = spidevice;
+    config->device = SPI_DEV_TO_CFG(spidevice); // CLI ids are 1-based, spiSetBusInstance() subtracts 1
     if (spidevice != SPIINVALID && config->chipSelectTag) {
         config->mode = SDCARD_MODE_SPI;
     }
